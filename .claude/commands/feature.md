@@ -27,7 +27,10 @@ Führe folgende Schritte der Reihe nach aus:
 - Erstelle oder aktualisiere Tests für das neue Feature
 
 ### 4. Tests ausführen
-- Führe `./gradlew test` im backend/ Verzeichnis aus
+- Prüfe zuerst, ob die Docker-Container laufen: `docker-compose -f docker/docker-compose.yml ps`
+- Falls Container nicht laufen, starte sie: `docker-compose -f docker/docker-compose.yml up -d`
+- Warte kurz, bis alle Services bereit sind (PostgreSQL, Keycloak, Walt.id)
+- Führe dann `./gradlew test` im backend/ Verzeichnis aus
 - Bei Fehlern: Behebe die Fehler und führe die Tests erneut aus
 - Fahre erst fort, wenn alle Tests grün sind
 
