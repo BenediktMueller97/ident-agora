@@ -2,6 +2,9 @@ package ident.agora.backend.services
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import ident.agora.backend.entities.VerifiableCredential
+import ident.agora.backend.exceptions.CredentialIssuanceException
+import ident.agora.backend.exceptions.DIDCreationException
+import ident.agora.backend.exceptions.WaltIdException
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -21,9 +24,8 @@ class WaltIdService(
     private val client = OkHttpClient()
     private val JSON = "application/json; charset=utf-8".toMediaType()
 
-    fun createDID(username: String): String? {
-        return try {
-            // POST /v1/did/create mit method: "key"
+    fun createDID(username: String): String {
+        try {
             val requestBody = """{"method":"key"}"""
 
             val request = Request.Builder()
@@ -33,29 +35,29 @@ class WaltIdService(
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    logger.error("Failed to create DID: ${response.code}")
-                    return null
+                    throw WaltIdException("DID creation failed with status: ${response.code}")
                 }
 
-                // Response ist Plain Text DID
                 val did = response.body?.string()?.trim()
+                    ?: throw WaltIdException("Empty response from DID creation")
                 logger.info("Created DID for $username: $did")
-                did
+                return did
             }
+        } catch (e: WaltIdException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Error creating DID for user: $username", e)
-            null
+            throw DIDCreationException(username)
         }
     }
 
-    fun issueCredential(userDid: String, verificationType: String): VerifiableCredential? {
-        return try {
-            // Fallback: Mock VC erstellen, da Walt.id VC creation komplex ist
+    fun issueCredential(userDid: String, verificationType: String): VerifiableCredential {
+        try {
             val now = LocalDateTime.now()
             val expirationDate = now.plusYears(1)
             val formatter = DateTimeFormatter.ISO_DATE_TIME
 
-            VerifiableCredential(
+            return VerifiableCredential(
                 context = listOf("https://www.w3.org/2018/credentials/v1"),
                 id = "urn:uuid:${java.util.UUID.randomUUID()}",
                 type = listOf("VerifiableCredential", "IdentityCredential"),
@@ -79,7 +81,7 @@ class WaltIdService(
             )
         } catch (e: Exception) {
             logger.error("Error issuing credential", e)
-            null
+            throw CredentialIssuanceException("Failed to create credential for DID: $userDid")
         }
     }
 

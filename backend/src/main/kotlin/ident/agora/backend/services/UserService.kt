@@ -2,6 +2,9 @@ package ident.agora.backend.services
 
 import ident.agora.backend.entities.User
 import ident.agora.backend.entities.VerifiableCredential
+import ident.agora.backend.exceptions.UserAlreadyExistsException
+import ident.agora.backend.exceptions.UserNotFoundException
+import ident.agora.backend.exceptions.UserNotVerifiedException
 import ident.agora.backend.repositories.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -20,11 +23,10 @@ class UserService(
     @Transactional
     fun registerUser(email: String, username: String, password: String): User {
         if (userRepository.existsByEmail(email)) {
-            throw RuntimeException("Email already registered")
+            throw UserAlreadyExistsException(email)
         }
 
         val keycloakId = keycloakService.createUser(email, username, password)
-            ?: throw RuntimeException("Failed to create user in Keycloak")
 
         val user = User(
             keycloakId = keycloakId,
@@ -39,7 +41,7 @@ class UserService(
     @Transactional
     fun verifyUser(userId: String, verificationType: String): User {
         val user = userRepository.findById(userId)
-            .orElseThrow { RuntimeException("User not found") }
+            .orElseThrow { UserNotFoundException(userId) }
 
         user.verificationStatus = User.VerificationStatus.VERIFIED
         user.verifiedAt = LocalDateTime.now()
@@ -51,19 +53,17 @@ class UserService(
     @Transactional
     fun issueVerifiableCredential(userId: String): VerifiableCredential {
         val user = userRepository.findById(userId)
-            .orElseThrow { RuntimeException("User not found") }
+            .orElseThrow { UserNotFoundException(userId) }
 
         if (user.verificationStatus != User.VerificationStatus.VERIFIED) {
-            throw RuntimeException("User must be verified first")
+            throw UserNotVerifiedException(userId)
         }
 
         if (user.did == null) {
-            val did = waltIdService.createDID(user.username)
-            user.did = did
+            user.did = waltIdService.createDID(user.username)
         }
 
         val vc = waltIdService.issueCredential(user.did!!, user.verificationMethod!!)
-            ?: throw RuntimeException("Failed to issue VC")
 
         user.vcCredentialId = vc.id
         user.verificationStatus = User.VerificationStatus.VC_ISSUED
