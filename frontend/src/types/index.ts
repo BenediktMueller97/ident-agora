@@ -1,15 +1,21 @@
+export type VerificationStatusType = "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED" | "VC_ISSUED";
+
 export interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  verificationStatus: "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED";
+  username: string;
+  verificationStatus: VerificationStatusType;
+  did?: string;
+  hasVC: boolean;
+  verifiedAt?: string;
+  createdAt: string;
 }
 
 export interface VerificationStatus {
   userId: string;
-  status: "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED";
-  timestamp: string;
+  status: VerificationStatusType;
+  verifiedAt?: string;
+  hasVC: boolean;
 }
 
 export interface VerifiableCredential {
