@@ -1,5 +1,6 @@
 package ident.agora.backend.services
 
+import ident.agora.backend.exceptions.KeycloakException
 import jakarta.annotation.PostConstruct
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.KeycloakBuilder
@@ -46,8 +47,8 @@ class KeycloakService {
         logger.info("Keycloak admin client initialized")
     }
 
-    fun createUser(email: String, username: String, password: String): String? {
-        return try {
+    fun createUser(email: String, username: String, password: String): String {
+        try {
             val realmResource = keycloak.realm(realm)
             val usersResource = realmResource.users()
 
@@ -61,11 +62,7 @@ class KeycloakService {
 
             val response = usersResource.create(user)
             val userId = extractUserId(response)
-
-            if (userId == null) {
-                logger.error("Failed to create user in Keycloak")
-                return null
-            }
+                ?: throw KeycloakException("Failed to extract user ID from response")
 
             val credential = CredentialRepresentation().apply {
                 type = CredentialRepresentation.PASSWORD
@@ -75,29 +72,30 @@ class KeycloakService {
 
             usersResource.get(userId).resetPassword(credential)
             logger.info("User created in Keycloak: $userId")
-            userId
+            return userId
+        } catch (e: KeycloakException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Error creating user in Keycloak", e)
-            null
+            throw KeycloakException("Failed to create user", e)
         }
     }
 
-    fun getUser(keycloakId: String): UserRepresentation? {
-        return try {
-            keycloak.realm(realm).users().get(keycloakId).toRepresentation()
+    fun getUser(keycloakId: String): UserRepresentation {
+        try {
+            return keycloak.realm(realm).users().get(keycloakId).toRepresentation()
         } catch (e: Exception) {
             logger.error("Error getting user from Keycloak", e)
-            null
+            throw KeycloakException("Failed to get user: $keycloakId", e)
         }
     }
 
-    fun deleteUser(keycloakId: String): Boolean {
-        return try {
+    fun deleteUser(keycloakId: String) {
+        try {
             keycloak.realm(realm).users().get(keycloakId).remove()
-            true
         } catch (e: Exception) {
             logger.error("Error deleting user from Keycloak", e)
-            false
+            throw KeycloakException("Failed to delete user: $keycloakId", e)
         }
     }
 

@@ -1,9 +1,10 @@
 package ident.agora.backend.entities
 
-import ident.agora.backend.entities.VerifiableCredential
+import jakarta.validation.constraints.NotBlank
 import java.time.LocalDateTime
 
 data class VCIssueRequest(
+    @field:NotBlank(message = "User ID is required")
     val userId: String
 )
 
@@ -28,6 +29,7 @@ data class VCResponse(
 }
 
 data class VerifyPresentationRequest(
+    @field:NotBlank(message = "Presentation JSON is required")
     val presentationJson: String
 )
 

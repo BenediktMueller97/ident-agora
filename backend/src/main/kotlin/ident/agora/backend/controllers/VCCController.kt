@@ -6,6 +6,7 @@ import ident.agora.backend.entities.VerifyPresentationRequest
 import ident.agora.backend.entities.VerifyResponse
 import ident.agora.backend.services.UserService
 import ident.agora.backend.services.WaltIdService
+import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -19,26 +20,16 @@ class VCController(
     private val logger = LoggerFactory.getLogger(VCController::class.java)
 
     @PostMapping("/issue")
-    fun issueCredential(@RequestBody request: VCIssueRequest): ResponseEntity<VCResponse> {
-        return try {
-            logger.info("Issuing VC for user: ${request.userId}")
-            val vc = userService.issueVerifiableCredential(request.userId)
-            ResponseEntity.ok(VCResponse.from(vc))
-        } catch (e: Exception) {
-            logger.error("Failed to issue VC", e)
-            ResponseEntity.badRequest().build()
-        }
+    fun issueCredential(@Valid @RequestBody request: VCIssueRequest): ResponseEntity<VCResponse> {
+        logger.info("Issuing VC for user: ${request.userId}")
+        val vc = userService.issueVerifiableCredential(request.userId)
+        return ResponseEntity.ok(VCResponse.from(vc))
     }
 
     @PostMapping("/verify")
-    fun verifyPresentation(@RequestBody request: VerifyPresentationRequest): ResponseEntity<VerifyResponse> {
-        return try {
-            logger.info("Verifying presentation")
-            val valid = waltIdService.verifyPresentation(request.presentationJson)
-            ResponseEntity.ok(VerifyResponse(valid))
-        } catch (e: Exception) {
-            logger.error("Failed to verify presentation", e)
-            ResponseEntity.ok(VerifyResponse(false))
-        }
+    fun verifyPresentation(@Valid @RequestBody request: VerifyPresentationRequest): ResponseEntity<VerifyResponse> {
+        logger.info("Verifying presentation")
+        val valid = waltIdService.verifyPresentation(request.presentationJson)
+        return ResponseEntity.ok(VerifyResponse(valid))
     }
 }
